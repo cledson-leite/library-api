@@ -1,6 +1,7 @@
 package com.cledson_leite.library_api.api.resource;
 
 import com.cledson_leite.library_api.api.dto.BookDto;
+import com.cledson_leite.library_api.exceptions.BusinessException;
 import com.cledson_leite.library_api.model.entity.Book;
 import com.cledson_leite.library_api.service.BookServiceInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(SpringExtension.class)
@@ -38,7 +40,7 @@ public class BookControllerTest {
     @Test
     @DisplayName("Deve criar uma livro com sucesso")
     public void createBookTest() throws Exception{ // esta lançando para frente o erro
-        BookDto dto = BookDto.builder().title("As aventuras").author("Artur").isbn("001").build();
+        BookDto dto = createNewBook();
         Book savedBook = Book.builder().id(10l).title(dto.getTitle()).author(dto.getAuthor()).isbn(dto.getIsbn()).build();
         BDDMockito.given(service.save(Mockito.any(Book.class))).willReturn(savedBook);
         String json = new ObjectMapper().writeValueAsString(dto); //tranforma qualquer objeto em json
@@ -54,7 +56,41 @@ public class BookControllerTest {
                 .andExpect(jsonPath("author").value(dto.getAuthor()))
                 .andExpect(jsonPath("isbn").value(dto.getIsbn()));
     }
+
+    private static BookDto createNewBook() {
+        return BookDto.builder().title("As aventuras").author("Artur").isbn("001").build();
+    }
+
     @Test
     @DisplayName("Deve lançar erro de validação quando não houver dados suficientes para criação")
-    public void createInvalidBookTest(){}
+    public void createInvalidBookTest() throws Exception {
+        String json = new ObjectMapper().writeValueAsString(BookDto.builder().build());
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .post(BOOK_API)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .content(json);
+        mvc.perform(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("errors", hasSize(3)));
+    }
+
+    @Test
+    @DisplayName("Deve lançar erro caso isbn seja duplicado")
+    public void duplicatedIsbnError() throws Exception {
+        BookDto dto = createNewBook();
+        String json = new ObjectMapper().writeValueAsString(dto);
+        String error = "Isbn já cadastrado";
+        BDDMockito.given(service.save(Mockito.any(Book.class)))
+                .willThrow(new BusinessException(error));
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .post(BOOK_API)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .content(json);
+        mvc.perform(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("errors", hasSize(1)))
+                .andExpect(jsonPath("errors[0]").value(error));
+    }
 }
