@@ -7,10 +7,12 @@ import com.cledson_leite.library_api.model.entity.Book;
 import com.cledson_leite.library_api.service.BookServiceInterface;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/books")
@@ -30,6 +32,29 @@ public class BookController {
         book.setId(10l);
         this.service.save(book);
         return book;
+    }
+    @GetMapping("/{id}")
+    public Book getById(@PathVariable Long id){
+        Book foundedBook = this.service.getById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND)
+        );
+        return foundedBook;
+    }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteById(@PathVariable Long id){
+        this.service.remove(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND)
+        );
+    }
+    @PutMapping("/{id}")
+    public Book updateById(@PathVariable Long id, @Valid @RequestBody BookDto dto){
+        Book book = this.modelMapper.map(dto, Book.class);
+        book.setId(id);
+        Book updatedBook = this.service.updatedById(book).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND)
+        );
+        return updatedBook;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

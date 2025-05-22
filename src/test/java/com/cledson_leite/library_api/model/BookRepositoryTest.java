@@ -10,6 +10,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
@@ -25,15 +27,38 @@ public class BookRepositoryTest {
     @Test
     @DisplayName("Deve retornar verdadeiro caso existe um isbn já  cadastrado")
     public void returnTrue(){
-        Book book = Book.builder().title("qualquer").author("qualquer").isbn("1234").build();
+        Book book = createNewBook();
         entityManager.persist(book);
         boolean isExist = sut.existsByIsbn(book.getIsbn());
         assertThat(isExist).isTrue();
     }
+
+    private static Book createNewBook() {
+        return Book.builder().title("qualquer").author("qualquer").isbn("1234").build();
+    }
+
     @Test
     @DisplayName("Deve retornar falso caso não existe um isbn já  cadastrado")
     public void returnFalse(){
         boolean isExist = sut.existsByIsbn("1234");
         assertThat(isExist).isFalse();
+    }
+
+    @Test
+    @DisplayName("Deve salvar um livro")
+    public void saveBook(){
+        Book book = createNewBook();
+        Book savedBook = sut.save(book);
+        assertThat(savedBook.getId()).isNotNull();
+    }
+    @Test
+    @DisplayName("Deve encontrar um livro por ID")
+    public void findByIdBook(){
+        Book book = createNewBook();
+        //book.setId(10l);
+        entityManager.persist(book);
+        Optional<Book> findBook = sut.findById(book.getId());
+        assertThat(findBook.isPresent()).isTrue();
+        assertThat(findBook.get().getId()).isNotNull();
     }
 }
