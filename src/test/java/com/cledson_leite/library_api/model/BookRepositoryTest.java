@@ -55,10 +55,19 @@ public class BookRepositoryTest {
     @DisplayName("Deve encontrar um livro por ID")
     public void findByIdBook(){
         Book book = createNewBook();
-        //book.setId(10l);
-        entityManager.persist(book);
-        Optional<Book> findBook = sut.findById(book.getId());
+        Book existed = entityManager.persist(book);
+        Optional<Book> findBook = sut.findById(existed.getId());
         assertThat(findBook.isPresent()).isTrue();
-        assertThat(findBook.get().getId()).isNotNull();
+        assertThat(findBook.get().getId()).isEqualTo(existed.getId());
+    }
+    @Test
+    @DisplayName("Deve remover um livro do sistema")
+    public void deleteBook(){
+        Book book = createNewBook();
+        Book existed = entityManager.persist(book);
+        assertThat(existed.getId()).isNotNull();
+         sut.delete(existed);
+        Optional<Book> deleted = sut.findById(existed.getId());
+        assertThat(deleted.isEmpty()).isTrue();
     }
 }
